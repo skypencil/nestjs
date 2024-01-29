@@ -6,6 +6,9 @@ import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Todo } from './entities/todo.entity';
 import { CreateTodoDto } from './dto/create-todo.dto';
+import * as argon from "argon2"
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UsersService {
@@ -13,18 +16,44 @@ export class UsersService {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(Todo) private readonly todoRepo: Repository<Todo>,
-    private readonly entityManager: EntityManager
+    private readonly entityManager: EntityManager,
+    private jwt: JwtService,
+    private conf: ConfigService
   ) {}
 
   async create(createUserDto: CreateUserDto) {
-    const newUser = new User({
-      ...createUserDto,
-      todos: []
-    })
-    await this.userRepo.save(newUser)
-    return {
-      newUser
-    };
+
+    try {
+      const hash = await argon.hash(createUserDto.password)
+      const newUser = new User({
+        email: createUserDto.email,
+        hash: hash,
+        todos: []
+      })
+      await this.userRepo.save(newUser)
+      return this.signToken(newUser.id, newUser.email)
+    }
+    catch (error) {
+      throw error
+    }
+  }
+
+  async signin(userDto: CreateUserDto) {
+
+    try {
+      const user = await this.userRepo.findOneBy({email:userDto.email})
+      if (!user) {throw new ForbiddenException(`No Such User With Email of: ${userDto.email}`)}
+
+      const password_check = await argon.verify(user.hash, userDto.password)
+      if (!password_check) {
+        throw new ForbiddenException("Invalid Email or Password")
+    }
+
+      return this.signToken(user.id, user.email)
+    }
+    catch (error) {
+      throw error
+    }
   }
 
   async findAll() {
@@ -55,6 +84,7 @@ export class UsersService {
   async remove(id: number) {
     const user = await this.userRepo.findOneBy({id})
     if (!user) {throw new ForbiddenException(`No Such User With ID of: ${id}`)}
+    await this.todoRepo.delete({ user: user });
     this.userRepo.delete(id)
     return `User with id ${id} deleted successfully`;
   }
@@ -96,6 +126,22 @@ export class UsersService {
     this.todoRepo.delete(id)
     return `Todo with id ${id} deleted successfully`;
   }
+
+
+  async signToken(userId: number, email:string): Promise<{access_token: string}> {
+    const payload = {
+        sub: userId, email
+    }
+
+    const secret = this.conf.get('JWT_TOKEN')
+
+    const token = await this.jwt.signAsync(payload, {
+        expiresIn: "15m",
+        secret: secret
+    })
+
+    return {access_token: token}
+}
 
   
 }
