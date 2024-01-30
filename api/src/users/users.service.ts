@@ -46,7 +46,7 @@ export class UsersService {
 
       const password_check = await argon.verify(user.hash, userDto.password)
       if (!password_check) {
-        throw new ForbiddenException("Invalid Email or Password")
+        throw new ForbiddenException("Invalid Password try again")
     }
 
       return this.signToken(user.id, user.email)
@@ -89,6 +89,19 @@ export class UsersService {
     return `User with id ${id} deleted successfully`;
   }
 
+  async todo_get() {
+    const todos = await this.todoRepo.find();
+    return todos
+  }
+
+  async todo_get_from_one_user(id: number) {
+    const user = await this.userRepo.findOne({where: {id}, relations: ['todos']})
+    if (!user) {throw new ForbiddenException(`No Such User With ID of: ${id}`)}
+    const todos = user.todos
+    return {
+      todos
+    };
+  }
 
   async todo_add(id: number, createTodoDto: CreateTodoDto) {
     const user = await this.userRepo.findOne({where: {id}, relations: ['todos']})
@@ -127,6 +140,14 @@ export class UsersService {
     return `Todo with id ${id} deleted successfully`;
   }
 
+  async get_one_todo(id: number) {
+    const todo = await this.todoRepo.findOne({where: {id}})
+    if (!todo) {throw new ForbiddenException(`No Such Todo With ID of: ${id}`)}
+    return {
+      todo
+    };
+  }
+
 
   async signToken(userId: number, email:string): Promise<{access_token: string}> {
     const payload = {
@@ -136,12 +157,12 @@ export class UsersService {
     const secret = this.conf.get('JWT_TOKEN')
 
     const token = await this.jwt.signAsync(payload, {
-        expiresIn: "15m",
+        expiresIn: "10m",
         secret: secret
     })
 
     return {access_token: token}
-}
+  }
 
   
 }

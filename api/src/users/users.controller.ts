@@ -39,6 +39,17 @@ export class UsersController {
     return this.usersService.remove(+id);
   }
 
+  @Get('todo/add/all')
+  async todo_get() {
+    return this.usersService.todo_get();
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('todo/:id')
+  async todo_get_from_one_user(@Param('id') id: string) {
+    return this.usersService.todo_get_from_one_user(+id);
+  }
+
 
   @UseGuards(AuthGuard('jwt'))
   @Patch('todo/add/:id')
@@ -59,8 +70,8 @@ export class UsersController {
   }
 
   @UseGuards(AuthGuard('jwt'))
-  @Get('me/:id')
-  async me(@Param() id: string, @Req() req: Request) {
-    return "hi"
+  @Get('todo/one/:id')
+  async get_one_todo(@Param('id') id: string) {
+    return this.usersService.get_one_todo(+id)
   }
 }
