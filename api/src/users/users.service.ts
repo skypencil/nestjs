@@ -9,6 +9,7 @@ import { CreateTodoDto } from './dto/create-todo.dto';
 import * as argon from "argon2"
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import jwt from 'jsonwebtoken';
 
 @Injectable()
 export class UsersService {
@@ -39,7 +40,6 @@ export class UsersService {
   }
 
   async signin(userDto: CreateUserDto) {
-
     try {
       const user = await this.userRepo.findOneBy({email:userDto.email})
       if (!user) {throw new ForbiddenException(`No Such User With Email of: ${userDto.email}`)}
@@ -148,20 +148,33 @@ export class UsersService {
     };
   }
 
+  async refreshToken(rt: string) {
+    const decodedJwt = this.jwt.decode(rt)
+    return this.signToken(decodedJwt.sub, decodedJwt.email)
+  }
 
-  async signToken(userId: number, email:string): Promise<{access_token: string}> {
+
+  async signToken(userId: number, email:string): Promise<{access_token: string, refresh_token: string}> {
     const payload = {
         sub: userId, email
     }
 
-    const secret = this.conf.get('JWT_TOKEN')
+    const atSecret = this.conf.get('JWT_TOKEN')
+    const rtSecret = this.conf.get('RT_JWT_TOKEN')
 
-    const token = await this.jwt.signAsync(payload, {
-        expiresIn: "10m",
-        secret: secret
-    })
+    const [at, rt] = await Promise.all([
+      this.jwt.signAsync(payload, {
+          expiresIn: "1m",
+          secret: atSecret
+      }),
+      this.jwt.signAsync(payload, {
+        expiresIn: "60m",
+        secret: rtSecret
+      })
+    ])
 
-    return {access_token: token}
+
+    return {access_token: at, refresh_token: rt}
   }
 
   

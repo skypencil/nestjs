@@ -6,11 +6,11 @@ import { User } from './entities/user.entity';
 import { EntityManager, Repository } from 'typeorm';
 import { Todo } from './entities/todo.entity';
 import { JwtModule } from '@nestjs/jwt';
-import { JwtStrategy } from './strategy';
+import { AtStrategy, RtStrategy } from './strategy';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User, Todo]), JwtModule],
   controllers: [UsersController],
-  providers: [UsersService, Repository, EntityManager, JwtStrategy],
+  providers: [UsersService, Repository, EntityManager, AtStrategy, RtStrategy],
 })
 export class UsersModule {}

@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { Request } from 'express';
+
 
 @Controller('users')
 export class UsersController {
@@ -37,6 +39,13 @@ export class UsersController {
   @Delete(':id')
   async remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
+  }
+
+  @UseGuards(AuthGuard('jwt-rt'))
+  @Post('refresh')
+  async refresh(@Req() req: Request) {
+    const user = req.user
+    return this.usersService.refreshToken(user["refreshToken"])
   }
 
   @Get('todo/add/all')

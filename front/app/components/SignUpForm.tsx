@@ -26,8 +26,9 @@ export default function SignUpForm() {
         })
 
         if (res.ok) {
-            const {access_token} = await res.json();
+            const {access_token, refresh_token} = await res.json();
             Cookies.set('jwtToken', access_token);
+            Cookies.set('jwtRToken', refresh_token);
             router.push("/todos/list/")
         }
     }
