@@ -4,8 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { EntityManager, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Todo } from './entities/todo.entity';
-import { CreateTodoDto } from './dto/create-todo.dto';
+import { Todo } from 'src/todos/entities/todo.entity';
 import * as argon from "argon2"
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -35,6 +34,11 @@ export class UsersService {
       return this.signToken(newUser.id, newUser.email)
     }
     catch (error) {
+      if (error.code === '23505') {
+        return {
+          'error': 'This email has already taken...!!!'
+        }
+      }
       throw error
     }
   }
@@ -47,7 +51,7 @@ export class UsersService {
       const password_check = await argon.verify(user.hash, userDto.password)
       if (!password_check) {
         throw new ForbiddenException("Invalid Password try again")
-    }
+      }
 
       return this.signToken(user.id, user.email)
     }
@@ -71,8 +75,14 @@ export class UsersService {
   async update(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.userRepo.findOneBy({id})
     if (!user) {throw new ForbiddenException(`No Such User With ID of: ${id}`)}
+    const password_check = await argon.verify(user.hash, updateUserDto.password)
+    if (!password_check) {
+      throw new ForbiddenException("Invalid Password try again")
+    }
+    const newPasswordHash = await argon.hash(updateUserDto.newPassword)
     user.firstname = updateUserDto.firstname
     user.lastname = updateUserDto.lastname
+    user.hash = newPasswordHash
 
     this.userRepo.save(user)
     return {
@@ -87,65 +97,6 @@ export class UsersService {
     await this.todoRepo.delete({ user: user });
     this.userRepo.delete(id)
     return `User with id ${id} deleted successfully`;
-  }
-
-  async todo_get() {
-    const todos = await this.todoRepo.find();
-    return todos
-  }
-
-  async todo_get_from_one_user(id: number) {
-    const user = await this.userRepo.findOne({where: {id}, relations: ['todos']})
-    if (!user) {throw new ForbiddenException(`No Such User With ID of: ${id}`)}
-    const todos = user.todos
-    return {
-      todos
-    };
-  }
-
-  async todo_add(id: number, createTodoDto: CreateTodoDto) {
-    const user = await this.userRepo.findOne({where: {id}, relations: ['todos']})
-    if (!user) {throw new ForbiddenException(`No Such User With ID of: ${id}`)}
-
-    const todo = createTodoDto.todos.map(t => new Todo(t))
-
-    user.todos = [...user.todos, ...todo];
-
-    this.userRepo.save(user)
-    return {
-      user
-    };
-  }
-
-
-  async todo_update(id: number) {
-    const todo = await this.todoRepo.findOneBy({id})
-    
-    if (!todo) {throw new ForbiddenException(`No Such Todo With ID of: ${id}`)}
-    if (todo.done) {
-      todo.done = false
-    } else {todo.done = true}
-    this.todoRepo.save(todo)
-    return {
-      todo
-    };
-  }
-
-  async todo_delete(id: number) {
-    const todo = await this.todoRepo.findOneBy({id})
-    
-    if (!todo) {throw new ForbiddenException(`No Such Todo With ID of: ${id}`)}
-    
-    this.todoRepo.delete(id)
-    return `Todo with id ${id} deleted successfully`;
-  }
-
-  async get_one_todo(id: number) {
-    const todo = await this.todoRepo.findOne({where: {id}})
-    if (!todo) {throw new ForbiddenException(`No Such Todo With ID of: ${id}`)}
-    return {
-      todo
-    };
   }
 
   async refreshToken(rt: string) {
@@ -164,7 +115,7 @@ export class UsersService {
 
     const [at, rt] = await Promise.all([
       this.jwt.signAsync(payload, {
-          expiresIn: "1m",
+          expiresIn: "2m",
           secret: atSecret
       }),
       this.jwt.signAsync(payload, {

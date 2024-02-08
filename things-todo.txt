@@ -1,0 +1,6 @@
+1. create a sperated module for todos (done)
+2. use token to routes which need id of user (done)
+3. call refresh end point authomatically when accessToken expires
+4. use useEffect hook in front-end
+5. add edit todo's text (done)
+6. add forgot user password (done)

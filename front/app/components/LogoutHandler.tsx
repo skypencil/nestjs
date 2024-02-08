@@ -1,12 +1,11 @@
 "use client"
 import Cookies from 'js-cookie';
 
-import { cookies } from 'next/headers'
-
-export default async function LogoutHandler() {
-    const jwtToken = Cookies.remove('jwtToken')
+export default function LogoutHandler() {
+    Cookies.remove('jwtToken')
+    Cookies.remove('jwtRToken')
     return (
-        <div>You're Logged Out Please Sign</div>
+        <div>You are Logged Out Please Sign</div>
     )
 
 }

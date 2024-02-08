@@ -1,38 +1,46 @@
 'use client'
 
-import { revalidatePath } from "next/cache"
-
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useForm} from "react-hook-form"
 import Cookies from 'js-cookie';
 import jwt from 'jsonwebtoken';
+import refreshTokens from "./refreshFunction";
 
+
+
+type FormValues = {
+    todo: string
+}
 
 
 const AddForm = () => {
     
     const router = useRouter()
-    const jwtToken = Cookies.get('jwtToken')
-    let decodedToken
-    if (jwtToken !== undefined) {
-        decodedToken = jwt.decode(jwtToken)
-    } else {decodedToken = ""}
+    const formHook = useForm<FormValues>()
+    const { register, handleSubmit } = formHook;
+
+    let jwtToken = Cookies.get('jwtToken') || ""
+    let jwtRToken = Cookies.get('jwtRToken') || ""
     
 
-    const userId = decodedToken ? decodedToken.sub : null;
+    const onsubmit = async (data:FormValues) => {
 
-
-    const [todo, setTodo] = useState("")
-    const handleSubmit = async (e: React.MouseEvent<HTMLFormElement>) => {
-        e.preventDefault()
         const createTodoDto = {
             todos: [
                 {
-                    "text": todo
+                    "text": data.todo
                 }
             ],
         }
-        const res = await fetch(`http://localhost:3000/users/todo/add/${userId}`, {
+
+        if (jwtToken && jwtRToken) {
+            const decodeedToken = jwt.decode(jwtToken) as {exp: 0}
+            if (decodeedToken.exp < Date.now() / 1000) {
+                jwtToken = await refreshTokens(jwtRToken)
+            }
+        }
+
+        const res = await fetch(`http://localhost:3001/todos/add/`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -44,12 +52,11 @@ const AddForm = () => {
         if (res.ok) {
             router.push("/todos/list/")
         }
-
     }
 
     return (
-        <form onSubmit={handleSubmit}>
-            <input onChange={e=>setTodo(e.target.value)} type="text" placeholder="Todo" className="input input-bordered input-accent w-full max-w-xs my-2" />
+        <form onSubmit={handleSubmit(onsubmit)}>
+            <input id="todo" {...register("todo")} type="text" placeholder="Todo" className="input input-bordered input-accent w-full max-w-xs my-2" />
             <button className="btn btn-accent my-2">Add Todo</button>
         </form>
     )

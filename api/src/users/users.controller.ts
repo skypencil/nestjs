@@ -2,7 +2,6 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } fro
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { CreateTodoDto } from './dto/create-todo.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
 
@@ -11,7 +10,7 @@ import { Request } from 'express';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
+  @Post("signup")
   async create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
@@ -26,19 +25,26 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  @UseGuards(AuthGuard('jwt'))
+  @Get('profile')
+  async profile(@Req() req: Request) {
+    const user = req.user
+    return this.usersService.findOne(user['sub']);
   }
 
-  @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch('update')
+  async update(@Req() req: Request, @Body() updateUserDto: UpdateUserDto) {
+    const user = req.user
+    return this.usersService.update(user['sub'], updateUserDto);
   }
 
-  @Delete(':id')
-  async remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('delete')
+  async remove(@Req() req: Request) {
+    const user = req.user
+    return this.usersService.remove(user['sub']);
   }
 
   @UseGuards(AuthGuard('jwt-rt'))
@@ -48,39 +54,4 @@ export class UsersController {
     return this.usersService.refreshToken(user["refreshToken"])
   }
 
-  @Get('todo/add/all')
-  async todo_get() {
-    return this.usersService.todo_get();
-  }
-
-  @UseGuards(AuthGuard('jwt'))
-  @Get('todo/:id')
-  async todo_get_from_one_user(@Param('id') id: string) {
-    return this.usersService.todo_get_from_one_user(+id);
-  }
-
-
-  @UseGuards(AuthGuard('jwt'))
-  @Patch('todo/add/:id')
-  async todo_add(@Param('id') id: string, @Body() createTodoDto: CreateTodoDto) {
-    return this.usersService.todo_add(+id, createTodoDto);
-  }
-
-  @UseGuards(AuthGuard('jwt'))
-  @Patch('todo/update/:id')
-  async todo_update(@Param('id') id: string) {
-    return this.usersService.todo_update(+id);
-  }
-
-  @UseGuards(AuthGuard('jwt'))
-  @Delete('todo/delete/:id')
-  async todo_delete(@Param('id') id: string) {
-    return this.usersService.todo_delete(+id);
-  }
-
-  @UseGuards(AuthGuard('jwt'))
-  @Get('todo/one/:id')
-  async get_one_todo(@Param('id') id: string) {
-    return this.usersService.get_one_todo(+id)
-  }
 }

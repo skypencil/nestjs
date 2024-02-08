@@ -5,18 +5,29 @@ import CrossMarkSvg from "@/app/components/CrossMarkSvg"
 import TickMarkSvg from "@/app/components/TickMarkSvg"
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken';
+import refreshTokens from "@/app/components/refreshFunction";
 
 
 const fetchData = async () => {
     const cookieStore = cookies()
 
-    const jwtToken = cookieStore.get('jwtToken').value
+    let jwtToken = cookieStore.get('jwtToken')?.value
+
+    let jwtRToken = cookieStore.get('jwtRToken')?.value
 
     const decodedToken = jwt.decode(jwtToken)
 
     const userId = decodedToken ? decodedToken.sub : null;
     try {
-        const res = await fetch(`http://localhost:3000/users/todo/${userId}`, {
+
+        if (jwtToken && jwtRToken) {
+            const decodeedToken = jwt.decode(jwtToken)
+            if (decodeedToken.exp < Date.now() / 1000) {
+                jwtToken = await refreshTokens(jwtRToken)
+            }
+        }
+
+        const res = await fetch(`http://localhost:3001/todos/my-todos`, {
             next: {tags: ['reload']},
             method: "GET",
             headers: {
@@ -38,6 +49,7 @@ const ViewTodo = async () => {
 
     const data = await fetchData()
     if (data.message) {
+        
         return (
             <div>Please Sign In To View Todos</div>
         )

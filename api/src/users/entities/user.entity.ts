@@ -1,8 +1,9 @@
 import { todo } from "node:test";
-import { Entity, PrimaryGeneratedColumn, UpdateDateColumn, CreateDateColumn, Column, OneToMany } from "typeorm";
-import { Todo } from "./todo.entity";
+import { Entity, PrimaryGeneratedColumn, UpdateDateColumn, CreateDateColumn, Column, OneToMany, Unique } from "typeorm";
+import { Todo } from "src/todos/entities/todo.entity";
 
 @Entity()
+@Unique(['email'])
 export class User {
     @PrimaryGeneratedColumn()
     id: number;

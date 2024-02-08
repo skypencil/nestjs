@@ -1,5 +1,5 @@
 import { IsEmail, IsNotEmpty, IsString } from "class-validator";
-import { CreateTodoDto } from "./create-todo.dto";
+import { CreateTodoDto } from "src/todos/dto/create-todo.dto";
 
 export class UpdateUserDto {
     @IsEmail()
@@ -13,4 +13,12 @@ export class UpdateUserDto {
     @IsString()
     @IsNotEmpty()
     lastname: string;
+
+    @IsString()
+    @IsNotEmpty()
+    password: string;
+
+    @IsString()
+    @IsNotEmpty()
+    newPassword: string;
 }
